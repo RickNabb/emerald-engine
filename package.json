@@ -1,0 +1,19 @@
+{
+  "name": "socket-io-test-server",
+  "version": "1.0.0",
+  "description": "Just a quick test to get the hang of SocketIO",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon server/app.js --use-strict --exec babel-node"
+  },
+  "author": "Nick Rabb",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.10.2",
+    "socket.io": "^1.7.2"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.18.0",
+    "babel-plugin-transform-async-to-generator": "^6.16.0"
+  }
+}
