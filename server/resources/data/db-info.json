@@ -1,0 +1,9 @@
+[
+   {
+      "id":"local-dev",
+      "databaseName":"emerald-test-dev",
+      "host":"localhost",
+      "user":"root",
+      "password":""
+   }
+]

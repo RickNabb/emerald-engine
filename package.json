@@ -1,16 +1,21 @@
 {
-  "name": "socket-io-test-server",
+  "name": "emerald-engine",
   "version": "1.0.0",
   "description": "Just a quick test to get the hang of SocketIO",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon server/app.js --use-strict --exec babel-node"
+    "start": "babel-node --use-strict server/app.js",
+    "start-prod": "nodemon server/app.js --use-strict --exec babel-node"
   },
   "author": "Nick Rabb",
   "license": "ISC",
   "dependencies": {
     "express": "^4.10.2",
-    "socket.io": "^1.7.2"
+    "socket.io": "^1.7.2",
+    "mysql": "^2.5.4",
+    "tiny-uuid4": "~1.0.1",
+    "promise": "~7.1.1",
+    "request": "~2.79.0"
   },
   "devDependencies": {
     "babel-cli": "^6.18.0",

@@ -1,0 +1,6 @@
+{
+  "development": {
+    "dbInfo": "./db-info.json",
+    "dbName": "travelmind-dev"
+  }
+}

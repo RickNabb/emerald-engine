@@ -4,14 +4,13 @@
 * the app will have to interact with.
 */
 
-module.exports = (engine, fs) => {
+module.exports = (engine, fs, promise) => {
   return new Promise(async (resolve, reject) => {
-    await require('../shared/packets/connection.js')(engine, fs)
-      .then(packets => resolve(
+    let packets = await require('../shared/packets/server/connection.js')(engine, fs, promise)
+    resolve(
         {
           "engine": engine,
           "packets": packets
-        }
-      ))
+        })
   })
 }
