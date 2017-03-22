@@ -9,14 +9,21 @@ define(function (require) {
    */
   function init() {
     return new Promise(async (resolve, reject) => {
-      let packets = {}, packet
+      let packets = {"in": [], "out": []}, packet, index
       $.get('/api/packets/client',
         function (data) {
-          let packets = {}
-          for (index in data) {
-            packet = data[index]
-            require(['../../api/packets/client/' + packet], (packetMod) => {
-              packets[packet] = (packetMod)
+          for (index in data.in) {
+            packet = data.in[index]
+            console.log(packet)
+            require(['../../api/packets/client/in/' + packet], (packetMod) => {
+              packets.in[packet] = (packetMod)
+            })
+          }
+          for (index in data.out) {
+            packet = data.out[index]
+            console.log(packet)
+            require(['../../api/packets/client/out/' + packet], (packetMod) => {
+              packets.out[packet] = (packetMod)
             })
           }
           resolve(packets)
@@ -30,15 +37,15 @@ define(function (require) {
    * @param  {string} packet The packet name.
    * @param  {object} data   JSON data to send.
    */
-  function send(packet, data) {
-    packet.send(socket, data)
-  }
+  // function send(packet, data) {
+  //   packet.send(socket, data)
+  // }
 
   return new Promise(async (resolve, reject) => {
     let packets = await init()
     resolve({
       "packets": packets,
-      "send": send
+      // "send": send
     })
   })
 })

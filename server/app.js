@@ -57,6 +57,12 @@ let engine = require('./engine.js')(io, debug, db)
 let packetManager
 
 /**
+ * The data object manager to handle reading in all of the data objects
+ * and running any functions associated with them.
+ */
+let dataObjectManager
+
+/**
  * The port to listen on.
  */
 let port = 3000
@@ -66,15 +72,26 @@ let port = 3000
  * Modules that load asynchronously are loaded here as well.
  */
 async function init() {
-  debug.log('Socket IO Test Server Started...')
-  app.use(express.static('client'))
-  process.on('uncaughtException', (exception) => {
-    debug.error(exception, true)
-    process.exit()
-  })
+  // Start the server
+  debug.log('TravelMind Server Started...')
+  app.use('/emerald', express.static(path.join(__dirname, '/../client/scripts')))
+  app.use('/imports', express.static(path.join(__dirname, '/../../imports')))
+  app.use('/css', express.static(path.join(__dirname, '/../../client/css')))
+  app.use('/js', express.static(path.join(__dirname, '/../../client/js/build')))
+
+  // TODO : Make sure we can get each CSS file from these static serve-ups
+
+  // process.on('uncaughtException', (exception) => {
+  //   debug.error(exception, true)
+  //   process.exit()
+  // })
   http.listen(port, function() {
-    debug.log("Listening on *:3000...")
+    debug.log("Listening on *:" + port + "...")
   })
+  db.init()
+
+  // Start up all the managers
+  dataObjectManager = await require('./dataObjectManager.js')(engine, db, fs, promise)
   packetManager = await require('./packetManager.js')(engine, fs, promise)
   setupRoutes()
 }
@@ -83,28 +100,40 @@ async function init() {
  * setupRoutes - Set up the routes that the client can use
  */
 function setupRoutes() {
-  let index, packet
+  let index, clientInPacket, clientOutPacket, serverInPacket, serverOutPacket
   // Root
   app.get('/', function (req, res) {
-    res.sendFile(path.resolve(__dirname + '/../client/index.html'))
+    res.sendFile(path.resolve(__dirname + '/../../client/main.html'))
   })
   // Publish a list of packets and each packet
   app.get('/api/packets/client', function (req, res) {
     res.json(packetManager.packets.client)
   })
-  for (index in packetManager.packets.client) {
-    packet = packetManager.packets.client[index]
-    app.get('/api/packets/client/' + packet + '.js', function (req, res) {
-      res.sendFile(path.resolve(__dirname + "/../shared/packets/client/" + packet + ".js"))
+  for (index in packetManager.packets.client.in) {
+    clientInPacket = packetManager.packets.client.in[index]
+    app.get('/api/packets/client/in/' + clientInPacket + '.js', function (req, res) {
+      res.sendFile(path.resolve(__dirname + "/../shared/packets/client/in/" + clientInPacket + ".js"))
+    })
+  }
+  for (index in packetManager.packets.client.out) {
+    clientOutPacket = packetManager.packets.client.out[index]
+    app.get('/api/packets/client/out/' + clientOutPacket + '.js', function (req, res) {
+      res.sendFile(path.resolve(__dirname + "/../shared/packets/client/out/" + clientOutPacket + ".js"))
     })
   }
   app.get('/api/packets/server', function (req, res) {
     res.json(Object.keys(packetManager.packets.server))
   })
-  for (index in Object.keys(packetManager.packets.server)) {
-    packet = Object.keys(packetManager.packets.server)[index]
-    app.get('/api/packets/server/' + packet + ".js", function (req, res) {
-      res.sendFile(path.resolve(__dirname + "/../shared/packets/server/" + packet + ".js"))
+  for (index in Object.keys(packetManager.packets.server.in)) {
+    serverInPacket = Object.keys(packetManager.packets.server.in)[index]
+    app.get('/api/packets/server/in/' + serverInPacket + ".js", function (req, res) {
+      res.sendFile(path.resolve(__dirname + "/../shared/packets/server/in/" + serverInPacket + ".js"))
+    })
+  }
+  for (index in Object.keys(packetManager.packets.server.out)) {
+    serverOutPacket = Object.keys(packetManager.packets.server.out)[index]
+    app.get('/api/packets/server/out/' + serverOutPacket + ".js", function (req, res) {
+      res.sendFile(path.resolve(__dirname + "/../shared/packets/server/out/" + serverOutPacket + ".js"))
     })
   }
 }

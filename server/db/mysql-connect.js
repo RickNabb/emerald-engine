@@ -26,7 +26,7 @@ let pool;
  */
 function connect(database, callback) {
     let i;
-    fs.readFile('./server/resources/data/db-info.json', 'utf8', (err, data) => {
+    fs.readFile(__dirname + '/../resources/data/db-info.json', 'utf8', (err, data) => {
         if (err) {
             return console.log(err);
         }
@@ -58,33 +58,52 @@ function connect(database, callback) {
  * @param {string} queryString - The query to send to the MYSQL pool.
  * @param {array} params - Parameters to send into a potentially parameterized query string.
  * @param {function} callback - Code to run when the request is complete
- * @param {object} res - The results to set when the function completes.
  */
-function query(queryString, params, callback, res) {
+function query(queryString, params, callback) {
     pool.getConnection((err, conn) => {
         if (err) {
-            res.status(400);
-            res.send('Error connecting to the database: ' + err);
+            callback(err, 'Error connecting to the database');
         } else {
             conn.query(queryString, params, (err, results) => {
                 // Debugging
                 // console.log("Query results: " + JSON.stringify(results));
                 // console.log("Query: " + queryString);
-                if (err !== null) {
-                    console.log("Error: " + err);
-                }
-                if (!err) {
-                    if (callback === null) {
-                        res.json(results);
-                    } else {
-                        res = results;
-                        callback(res);
-                    }
+                if (callback) {
+                  callback(err, results)
+                } else {
+                  res.json(results)
                 }
                 conn.release();
             });
         }
     });
+}
+
+/**
+ * Return a Promise that will send a query to the MySQL Pool.
+ * @author Nick Rabb <nrabb@outlook.com>
+ * @param {string} queryString - The query to send to the MYSQL pool.
+ * @param {array} params - Parameters to send into a potentially parameterized query string.
+ */
+function queryPromise(queryString, params) {
+  return new Promise((resolve, reject) => {
+    pool.getConnection((err, conn) => {
+        if (err) {
+            reject('Error connecting to the database: ' + err);
+        } else {
+            conn.query(queryString, params, (err, results) => {
+                // Debugging
+                // console.log("Query results: " + JSON.stringify(results));
+                // console.log("Query: " + queryString);
+                if (err)
+                  reject(err);
+                else
+                  resolve(results)
+                conn.release();
+            });
+        }
+    });
+  })
 }
 
 /**
@@ -105,5 +124,6 @@ function closeConnection() {
 
 exports.connect = connect;
 exports.query = query;
+exports.queryPromise = queryPromise;
 exports.closeConnection = closeConnection;
 exports.pool = pool;

@@ -6,14 +6,14 @@
 
 module.exports = (fs) => {
   let mysql = require('./mysql-connect.js')
-  // fs.readFile('../resources/data/db-info.json', (err, data) => {
-  //   if (!err) {
-      mysql.connect('local-dev', () => {
 
-      }) //TODO: Make this loaded from a config
-  //   }
-  // })
+  function init() {
+    mysql.connect('local-dev', () => {
+
+    }) //TODO: Make this loaded from a config
+  }
   return {
-    "mysql": mysql
+    "mysql": mysql,
+    "init": init
   }
 }

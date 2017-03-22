@@ -1,8 +1,8 @@
 requirejs.config({
-  baseUrl: 'scripts/lib',
+  baseUrl: 'emerald/lib',
   paths: {
     app: '../app'
   }
 })
 
-requirejs(['app/app'])
+requirejs(['app/emerald'])

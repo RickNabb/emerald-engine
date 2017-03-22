@@ -6,11 +6,17 @@
 
 module.exports = (engine, fs, promise) => {
   return new Promise(async (resolve, reject) => {
-    let packets = await require('../shared/packets/server/connection.js')(engine, fs, promise)
+    let packets = await require(__dirname + '/../shared/packets/server/in/connection.js')(engine, fs, promise)
+    engine.debug.log('Packet Manager started')
+
+    function send(packet, data) {
+
+    }
+
     resolve(
-        {
-          "engine": engine,
-          "packets": packets
-        })
+      {
+        "packets": packets
+      }
+    )
   })
 }

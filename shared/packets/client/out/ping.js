@@ -9,9 +9,11 @@ define(function (require) {
 
   function send(socket, dateTime) {
     console.log('Pinging server...')
-    socket.emit('ping', {
-      "datetime": dateTime
-    })
+    try {
+      socket.emit('clientPing', {"datetime": dateTime})
+    } catch (err) {
+      console.log('err')
+    }
   }
 
   return {
