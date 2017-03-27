@@ -42,6 +42,11 @@ let promise = require('promise')
 let debug = require('./utils/debug.js')
 
 /**
+ * A function full of string helper functions.
+ */
+let stringFunctions = require('./utils/stringFunctions.js')
+
+/**
  * The database module.
  */
 let db = require('./db/databaseManager.js')(fs)
@@ -49,7 +54,7 @@ let db = require('./db/databaseManager.js')(fs)
 /**
  * The main server engine/
  */
-let engine = require('./engine.js')(io, debug, db)
+let engine = require('./engine.js')(io, debug, db, stringFunctions)
 
 /**
  * The packet manager to handle transactions between client and server.
@@ -91,7 +96,7 @@ async function init() {
   db.init()
 
   // Start up all the managers
-  dataObjectManager = await require('./dataObjectManager.js')(engine, db, fs, promise)
+  dataObjectManager = await require('./dataObjects/dataObjectManager.js')(engine, db, fs, promise)
   packetManager = await require('./packetManager.js')(engine, fs, promise)
   setupRoutes()
 }

@@ -10,12 +10,14 @@
  * @param  {object} io    The SocketIO module
  * @param  {object} debug The debug module
  * @param  {object} db    The database manager
+ * @param  {object} stringFunctions The string functions module.
  */
-module.exports = (_io, _debug, _db) => {
+module.exports = (_io, _debug, _db, _stringFunctions) => {
   return {
     "io": _io,
     "debug": _debug,
     "db": _db,
+    "stringFunctions": _stringFunctions,
     "ROOT_DIR": __dirname
   }
 }

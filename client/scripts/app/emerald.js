@@ -14,7 +14,7 @@ define(function (require) {
   )
   $(document).foundation()
 
-  return {
+  document.emerald = {
     "socket": socket,
     "packetManager": packetManager
   }

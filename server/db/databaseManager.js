@@ -12,6 +12,7 @@ module.exports = (fs) => {
 
     }) //TODO: Make this loaded from a config
   }
+  
   return {
     "mysql": mysql,
     "init": init
