@@ -45,7 +45,7 @@ function connect(database, callback) {
             database: mode.databaseName
         });
         if (pool) {
-          console.log("Connection to MySQL " + mode.id + " : " + mode.databaseName + " established");
+          console.log("Connection to MySQL " + mode.id + " : " + mode.databaseName + " set up");
         }
         // Run any further server initialization code
         callback();

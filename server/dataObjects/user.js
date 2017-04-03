@@ -5,7 +5,7 @@
 */
 module.exports = (db) => {
 	function createUser(email,password_hash,active,confirmation_uuid,callback) {
-		db.query('INSERT INTO `user` (email,password_hash,active,confirmation_uuid) VALUES (?, ?, ?, ?,)',
+		db.query('INSERT INTO `user` (email,password_hash,active,confirmation_uuid) VALUES (?,?,?,?)',
 			[email,password_hash,active,confirmation_uuid],
 			function(err, res) {
 				callback(err, res)
@@ -38,5 +38,12 @@ module.exports = (db) => {
 			function(err, res) {
 				callback(err, res)
 			})
+	}
+	return {
+		"createUser": createUser,
+		"updateUser": updateUser,
+		"removeUser": removeUser,
+		"getUser": getUser,
+		"getUsers": getUsers
 	}
 }
