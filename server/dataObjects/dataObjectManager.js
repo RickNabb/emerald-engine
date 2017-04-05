@@ -6,8 +6,11 @@
 
 module.exports = (engine, db, fs, promise) => {
   return new Promise(async (resolve, reject) => {
+    // TODO : Figure out some good resoultion between storing data objects
+    // and data object modules
     let dataObjects
     let asyncTasks = []
+    let dataObjectModules = {}
     let readdirAsync = promise.denodeify(fs.readdir)
     let readfileAsync = promise.denodeify(fs.readFile)
     let dataTypes = {
@@ -21,10 +24,31 @@ module.exports = (engine, db, fs, promise) => {
     asyncTasks.push(writeDataObjectModules())
     await Promise.all(asyncTasks)
       .catch(err => engine.debug.error(err))
+    dataObjectModules = await loadDataObjectModules()
     engine.debug.log('Data Object Manager started')
     resolve({
-     "dataObjects": dataObjects
+     "dataObjects": dataObjectModules,
+     "copyObject": copyObject
     })
+
+    /**
+     * Load all of the data object modules we automatically
+     * generated into the dataObjectModules variable.
+     */
+    function loadDataObjectModules() {
+      return new Promise(async (resolve, reject) => {
+        let dataObjectFiles = await readdirAsync(__dirname)
+        let objectModules = {}
+        let i, dataObjectFile
+        for (i in dataObjectFiles) {
+          dataObjectFile = dataObjectFiles[i]
+          if (dataObjectFile !== 'dataObjectManager.js') {
+            objectModules[dataObjectFile.replace('.js', '')] = require(__dirname + '/' + dataObjectFile)(db)
+          }
+        }
+        resolve(objectModules)
+      })
+    }
 
     /**
      * collectDataObjects - Read all of the files in the data objects directory
@@ -32,7 +56,7 @@ module.exports = (engine, db, fs, promise) => {
      *
      * @return {object} A collection of all the data objects keyed by name.
      */
-    async function collectDataObjects() {
+    function collectDataObjects() {
       return new Promise(async (resolve, reject) => {
         let index, filePromises = [], parsePromises = [], dataObjects = {}
         let filePath = __dirname + "/../resources/data/dataObjects"
@@ -61,7 +85,7 @@ module.exports = (engine, db, fs, promise) => {
         let dataObject, query, dataObjectAttrs, dataObjectAttr,
           dataObjectAttrProps, i, columnResults, dataObjectAttrNames
         for (dataObject in dataObjects) {
-          dataObjectAttrs = cloneJSON(dataObjects[dataObject])
+          dataObjectAttrs = copyObject(dataObjects[dataObject])
           query = "SHOW columns FROM " + dataObject + ";"
           columnResults = await db.mysql.queryPromise(query, [])
             .catch(err => reject(err))
@@ -120,14 +144,6 @@ module.exports = (engine, db, fs, promise) => {
       })
     }
 
-    function cloneJSON(obj) {
-      let newObj = Object.keys(obj).reduce(function(previous, current) {
-        previous[current] = obj[current]
-        return previous
-      }, {})
-      return newObj
-    }
-
     /**
      * Write data object module files, containing CRUD operations on the
      * object, that we can use inside the app
@@ -138,7 +154,7 @@ module.exports = (engine, db, fs, promise) => {
         let dataObject, fileContents, fileAppend, dataObjectAttrs, dataObjectAttr, dataObjectAttrProps, dataObjectAttrStr, capitalDataObject
         let writeFilePromise = promise.denodeify(fs.writeFile)
         for (dataObject in dataObjects) {
-          dataObjectAttrs = cloneJSON(dataObjects[dataObject])
+          dataObjectAttrs = copyObject(dataObjects[dataObject])
           capitalDataObject = engine.stringFunctions.capitalizeFirstLetter(dataObject)
           // Remove the id attribute from the DO attributes
           // because we don't want to insert IDs, etc.
@@ -160,56 +176,61 @@ module.exports = (engine, db, fs, promise) => {
             fileAppend += dataObjectAttr + ","
           }
           dataObjectAttrStr = fileAppend.substring(0, fileAppend.length - 1)
-          fileContents += dataObjectAttrStr + ",callback) {\n" +
-            "\t\tdb.query('INSERT INTO `" + dataObject + "` (" + dataObjectAttrStr + ") VALUES ("
+          fileContents += dataObjectAttrStr + ") {\n" +
+            "\t\treturn new Promise(async (resolve, reject) => {\n" +
+            "\t\t\tlet user = await db.mysql.queryPromise('INSERT INTO `" + dataObject + "` (" + dataObjectAttrStr + ") VALUES ("
           fileAppend = ""
           for (dataObjectAttr in dataObjectAttrs) {
             fileAppend += "?,"
           }
           fileAppend = fileAppend.substring(0, fileAppend.length - 1)
           fileContents += fileAppend + ")',\n" +
-            "\t\t\t[" + dataObjectAttrStr + "],\n" +
-            "\t\t\tfunction(err, res) {\n" +
-            "\t\t\t\tcallback(err, res)\n" +
-            "\t\t\t})\n" +
+            "\t\t\t\t[" + dataObjectAttrStr + "])\n" +
+            "\t\t\t\t.catch(err => reject(err))\n" +
+            "\t\t\tresolve(" + dataObject + ")\n" +
+            "\t\t})\n" +
             "\t}\n"
           // Update function
-          fileContents += "\tfunction update" + capitalDataObject + "(id," + dataObjectAttrStr + ",callback) {\n" +
-            "\t\tdb.query('UPDATE `" + dataObject + "` SET "
+          fileContents += "\tfunction update" + capitalDataObject + "(id," + dataObjectAttrStr + ") {\n" +
+            "\t\treturn new Promise(async (resolve, reject) => {\n" +
+            "\t\t\tdb.mysql.query('UPDATE `" + dataObject + "` SET "
           fileAppend = ""
           for (dataObjectAttr in dataObjectAttrs) {
             fileAppend += "`" + dataObjectAttr + "`=?,"
           }
           fileAppend = fileAppend.substring(0, fileAppend.length - 1)
           fileContents += fileAppend + " WHERE `id`=?)',\n" +
-            "\t\t\t[" + dataObjectAttrStr + ",id],\n" +
-            "\t\t\tfunction(err, res) {\n" +
-            "\t\t\t\tcallback(err, res)\n" +
-            "\t\t\t})\n" +
+            "\t\t\t[" + dataObjectAttrStr + ",id])\n" +
+            "\t\t\t\t.catch(err => reject(err))\n" +
+            "\t\t\tresolve(" + dataObject + ")\n" +
+            "\t\t})\n" +
             "\t}\n"
           // Remove function
-          fileContents += "\tfunction remove" + capitalDataObject + "(id,callback) {\n" +
-            "\t\tdb.query('DELETE FROM `" + dataObject + "` WHERE `id`=?)',\n" +
-            "\t\t\t[id],\n" +
-            "\t\t\tfunction(err, res) {\n" +
-            "\t\t\t\tcallback(err, res)\n" +
-            "\t\t\t})\n" +
+          fileContents += "\tfunction remove" + capitalDataObject + "(id) {\n" +
+            "\t\treturn new Promise(async (resolve, reject) => {\n" +
+            "\t\t\tdb.mysql.query('DELETE FROM `" + dataObject + "` WHERE `id`=?)',\n" +
+            "\t\t\t[id])\n" +
+            "\t\t\t\t.catch(err => reject(err))\n" +
+            "\t\t\tresolve(" + dataObject + ")\n" +
+            "\t\t})\n" +
             "\t}\n"
           // Get singular function
-          fileContents += "\tfunction get" + capitalDataObject + "(id,callback) {\n" +
-            "\t\tdb.query('SELECT * FROM `" + dataObject + "` WHERE `id`=?)',\n" +
-            "\t\t\t[id],\n" +
-            "\t\t\tfunction(err, res) {\n" +
-            "\t\t\t\tcallback(err, res)\n" +
-            "\t\t\t})\n" +
+          fileContents += "\tfunction get" + capitalDataObject + "(id) {\n" +
+            "\t\treturn new Promise(async (resolve, reject) => {\n" +
+            "\t\t\tdb.mysql.query('SELECT * FROM `" + dataObject + "` WHERE `id`=?)',\n" +
+            "\t\t\t[id])\n" +
+            "\t\t\t\t.catch(err => reject(err))\n" +
+            "\t\t\tresolve(" + dataObject + ")\n" +
+            "\t\t})\n" +
             "\t}\n"
           // Get all function
-          fileContents += "\tfunction get" + capitalDataObject + "s(id,callback) {\n" +
-            "\t\tdb.query('SELECT * FROM `" + dataObject + "` )',\n" +
-            "\t\t\t[],\n" +
-            "\t\t\tfunction(err, res) {\n" +
-            "\t\t\t\tcallback(err, res)\n" +
-            "\t\t\t})\n" +
+          fileContents += "\tfunction get" + capitalDataObject + "s(id) {\n" +
+            "\t\treturn new Promise(async (resolve, reject) => {\n" +
+            "\t\t\tdb.mysql.query('SELECT * FROM `" + dataObject + "` )',\n" +
+            "\t\t\t[])\n" +
+            "\t\t\t\t.catch(err => reject(err))\n" +
+            "\t\t\tresolve(" + dataObject + ")\n" +
+            "\t\t})\n" +
             "\t}\n" +
             "\treturn {\n" +
             "\t\t\"create" + capitalDataObject + "\": create" + capitalDataObject + ",\n" +
@@ -224,6 +245,19 @@ module.exports = (engine, db, fs, promise) => {
           .catch(error => engine.debug.error(error))
         resolve()
       })
+    }
+
+    /**
+     * Create a deep copy of a javascript object.
+     * @param  {Object} obj The object to copy.
+     * @return {Object} A deep copy of obj.
+     */
+    function copyObject(obj) {
+      let newObj = Object.keys(obj).reduce(function(previous, current) {
+        previous[current] = obj[current]
+        return previous
+      }, {})
+      return newObj
     }
   })
 }

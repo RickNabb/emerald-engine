@@ -13,11 +13,14 @@
  * @param  {object} stringFunctions The string functions module.
  */
 module.exports = (_io, _debug, _db, _stringFunctions) => {
+  let dataObjectManager, packetManager
+
   return {
     "io": _io,
     "debug": _debug,
     "db": _db,
     "stringFunctions": _stringFunctions,
-    "ROOT_DIR": __dirname
+    "dataObjectManager": dataObjectManager,
+    "packetManager": packetManager,
   }
 }

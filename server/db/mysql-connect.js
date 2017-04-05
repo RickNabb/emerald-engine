@@ -24,11 +24,12 @@ let pool;
  * Create a pool to the MYSQL database.
  * @author Nick Rabb <nrabb@outlook.com>
  */
-function connect(database, callback) {
+function connect(database) {
+  return new Promise((resolve, reject) => {
     let i;
     fs.readFile(__dirname + '/../resources/data/db-info.json', 'utf8', (err, data) => {
         if (err) {
-            return console.log(err);
+            reject(err)
         }
         let dataJSON = JSON.parse(data),
             mode = "";
@@ -48,8 +49,9 @@ function connect(database, callback) {
           console.log("Connection to MySQL " + mode.id + " : " + mode.databaseName + " set up");
         }
         // Run any further server initialization code
-        callback();
+        resolve();
     });
+  })
 }
 
 /**
@@ -89,18 +91,17 @@ function queryPromise(queryString, params) {
   return new Promise((resolve, reject) => {
     pool.getConnection((err, conn) => {
         if (err) {
-            reject('Error connecting to the database: ' + err);
+            reject('Error connecting to the database: ' + err)
         } else {
             conn.query(queryString, params, (err, results) => {
                 // Debugging
                 // console.log("Query results: " + JSON.stringify(results));
                 // console.log("Query: " + queryString);
-                if (err)
-                  reject(err);
-                else
-                  resolve(results)
-                conn.release();
-            });
+                
+                conn.release()
+                if (err) reject(err)
+                resolve(results)
+            })
         }
     });
   })

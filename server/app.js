@@ -52,9 +52,14 @@ let stringFunctions = require('./utils/stringFunctions.js')
 let db = require('./db/databaseManager.js')(fs)
 
 /**
- * The main server engine/
+ * The main server engine.
  */
 let engine = require('./engine.js')(io, debug, db, stringFunctions)
+
+/**
+ * The auth manager.
+ */
+let authManager
 
 /**
  * The packet manager to handle transactions between client and server.
@@ -98,6 +103,12 @@ async function init() {
   // Start up all the managers
   dataObjectManager = await require('./dataObjects/dataObjectManager.js')(engine, db, fs, promise)
   packetManager = await require('./packetManager.js')(engine, fs, promise)
+
+  // Register managers with the engine
+  engine.dataObjectManager = dataObjectManager
+  engine.packetManager = packetManager
+
+  authManager = require(__dirname + '/auth/authManager.js')(engine, db, fs, promise)
   setupRoutes()
 }
 

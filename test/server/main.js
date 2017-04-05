@@ -9,9 +9,29 @@
 let fs = require('fs')
 
 /**
+ * The promise node module.
+ */
+let promise = require('promise')
+
+/**
+ * The debug module.
+ */
+let debug = require(__dirname + '/../../server/utils/debug.js')
+
+/**
+ * The string function module.
+ */
+let stringFunctions = require(__dirname + '/../../server/utils/stringFunctions.js')
+
+/**
  * The database module.
  */
-let db = require(__dirname + '/../server/db/databaseManager.js')(fs)
+let db = require(__dirname + '/../../server/db/databaseManager.js')(fs)
+
+/**
+ * The server's main engine.
+ */
+let engine = require(__dirname + '/../../server/engine.js')(null, debug, db, stringFunctions)
 
 /**
  * Load in the JSON configuration.
@@ -21,14 +41,21 @@ let config = require(__dirname + "/config.json")
 /**
  * The authentication manager tests.
  */
-let authManager = require(__dirname + "/auth/authManager.js")(db)
+let authManager = require(__dirname + "/auth/authManager.js")(db, engine, fs, promise)
+
+/**
+ * The data object manager.
+ */
+let dataObjectManager
 
 /**
  * Run the test suite.
  */
-function run() {
+async function run() {
   let test
-  db.init();
+  await db.init()
+  dataObjectManager = await require(__dirname + '/../../server/dataObjects/dataObjectManager.js')(engine, db, fs, promise)
+  engine.dataObjectManager = dataObjectManager
   for (test in config) {
     if (config[test] === 1) {
       if (test === "authManager") {
@@ -37,3 +64,5 @@ function run() {
     }
   }
 }
+
+run()

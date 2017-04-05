@@ -3,37 +3,77 @@
 * The tests for the authentication manager.
 */
 
-module.exports = (db) {
+module.exports = (db, engine, fs, promise) => {
 
-  let bcrypt = require('bcrypt-nodejs')
-  let uuid = require('tiny-uuid4')
+  let authManager = require(__dirname + '/../../../server/auth/authManager.js')(engine, db, fs, promise)
+  const saltRounds = 10
 
   let tests = [
-    prepareUser
+    prepareUser,
+    authenticateUserValid
   ]
 
-  function run() {
-    let res
-    console.log("--- Starting Auth Manager Tests ---")
-    for (test in tests) {
-      res = test()
-      if (!res) break
+  async function run() {
+    let res, i, test
+    engine.debug.log("--- Starting Auth Manager Tests ---")
+    for (i in tests) {
+      test = tests[i]
+      res = await test()
+        .catch(err => engine.debug.error(err))
+      if (res !== undefined) engine.debug.log(res)
     }
-    console.log("--- Stopping Auth Manager Tests ---")
+    engine.debug.log("--- Stopping Auth Manager Tests ---")
+    engine.debug.log("Cleaning up...")
+    res = 0
+    res = await cleanUp()
+      .catch(err => engine.debug.error(err))
+    engine.debug.log('Cleaned up ' + res + ' rows')
   }
 
   function prepareUser() {
-    bcrypt.hash('testsuiteuserpassword', null, null, (err, hash) => {
-      if (err) console.log("Auth Manager Prepare User : FAILED - " + err)
-      db.mysql.query(
-        "INSERT INTO `users` (`username`, `email`, `password_hash`, `active`, `confirmation_uuid`) VALUES (?, ?, ?, ?, ?)",
-        [ 'test_suite_user', 'testsuiteuser@email.com', hash, uuid() ],
-        function (result) {
-          if (result.affectedRows === 1 && result.insertId !== -1) {
-            console.log("Auth Manager Prepare User : PASSED")
-          }
-        }
-      )
+    return new Promise(async (resolve, reject) => {
+      let user
+      user = await authManager.createUser('testuser@test.com','testuserpassword')
+        .catch(err => reject("Prepare User Test: FAILED (" + err + ")"))
+      resolve("Prepare User Test: SUCCESS")
+    })
+  }
+
+  function authenticateUserValid() {
+    return new Promise(async (resolve, reject) => {
+      let result
+      result = await authManager.authenticate('testuser@test.com','testuserpassword')
+        .catch(err => reject("Prepare User Test: FAILED (" + err + ")"))
+      if (result[0].loginResponse === authManager.RESPONSE_INVALID_LOGIN)
+        resolve("Authenticate User Valid Test: SUCCESS")
+      else if (result[0].loginResponse === authManager.RESPONSE_OK)
+        resolve("Authenticate User Valid Test: FAILED (valid login)")
+      else
+        resolve("Authenticate User Valid Test: FAILED (unknown response)")
+    })
+  }
+
+  function authenticateUserInvalid() {
+    return new Promise(async (resolve, reject) => {
+      let result
+      result = await authManager.authenticate('testuser@test.com','testuserpassword')
+        .catch(err => reject("Prepare User Test: FAILED (" + err + ")"))
+      if (result[0].loginResponse === authManager.RESPONSE_OK)
+        resolve("Authenticate User Valid Test: SUCCESS")
+      else if (result[0].loginResponse === authManager.RESPONSE_INVALID_LOGIN)
+        resolve("Authenticate User Valid Test: FAILED (invalid login)")
+      else
+        resolve("Authenticate User Valid Test: FAILED (unknown response)")
+    })
+  }
+
+  function cleanUp() {
+    return new Promise(async (resolve, reject) => {
+      let results = await db.mysql.queryPromise(
+        "DELETE FROM `user` WHERE `email`=?",
+        [ 'testuser@test.com' ]
+      ).catch(err => reject(err))
+      resolve(results.affectedRows)
     })
   }
 
