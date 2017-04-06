@@ -178,7 +178,7 @@ module.exports = (engine, db, fs, promise) => {
           dataObjectAttrStr = fileAppend.substring(0, fileAppend.length - 1)
           fileContents += dataObjectAttrStr + ") {\n" +
             "\t\treturn new Promise(async (resolve, reject) => {\n" +
-            "\t\t\tlet user = await db.mysql.queryPromise('INSERT INTO `" + dataObject + "` (" + dataObjectAttrStr + ") VALUES ("
+            "\t\t\tlet " + dataObject + " = await db.mysql.queryPromise('INSERT INTO `" + dataObject + "` (" + dataObjectAttrStr + ") VALUES ("
           fileAppend = ""
           for (dataObjectAttr in dataObjectAttrs) {
             fileAppend += "?,"
@@ -193,7 +193,7 @@ module.exports = (engine, db, fs, promise) => {
           // Update function
           fileContents += "\tfunction update" + capitalDataObject + "(id," + dataObjectAttrStr + ") {\n" +
             "\t\treturn new Promise(async (resolve, reject) => {\n" +
-            "\t\t\tdb.mysql.query('UPDATE `" + dataObject + "` SET "
+            "\t\t\tlet " + dataObject + " = db.mysql.query('UPDATE `" + dataObject + "` SET "
           fileAppend = ""
           for (dataObjectAttr in dataObjectAttrs) {
             fileAppend += "`" + dataObjectAttr + "`=?,"
@@ -208,7 +208,7 @@ module.exports = (engine, db, fs, promise) => {
           // Remove function
           fileContents += "\tfunction remove" + capitalDataObject + "(id) {\n" +
             "\t\treturn new Promise(async (resolve, reject) => {\n" +
-            "\t\t\tdb.mysql.query('DELETE FROM `" + dataObject + "` WHERE `id`=?)',\n" +
+            "\t\t\tlet " + dataObject + " = db.mysql.query('DELETE FROM `" + dataObject + "` WHERE `id`=?)',\n" +
             "\t\t\t[id])\n" +
             "\t\t\t\t.catch(err => reject(err))\n" +
             "\t\t\tresolve(" + dataObject + ")\n" +
@@ -217,7 +217,7 @@ module.exports = (engine, db, fs, promise) => {
           // Get singular function
           fileContents += "\tfunction get" + capitalDataObject + "(id) {\n" +
             "\t\treturn new Promise(async (resolve, reject) => {\n" +
-            "\t\t\tdb.mysql.query('SELECT * FROM `" + dataObject + "` WHERE `id`=?)',\n" +
+            "\t\t\tlet " + dataObject + " = db.mysql.query('SELECT * FROM `" + dataObject + "` WHERE `id`=?)',\n" +
             "\t\t\t[id])\n" +
             "\t\t\t\t.catch(err => reject(err))\n" +
             "\t\t\tresolve(" + dataObject + ")\n" +
@@ -226,10 +226,10 @@ module.exports = (engine, db, fs, promise) => {
           // Get all function
           fileContents += "\tfunction get" + capitalDataObject + "s(id) {\n" +
             "\t\treturn new Promise(async (resolve, reject) => {\n" +
-            "\t\t\tdb.mysql.query('SELECT * FROM `" + dataObject + "` )',\n" +
+            "\t\t\tlet " + dataObject + "s = db.mysql.query('SELECT * FROM `" + dataObject + "` )',\n" +
             "\t\t\t[])\n" +
             "\t\t\t\t.catch(err => reject(err))\n" +
-            "\t\t\tresolve(" + dataObject + ")\n" +
+            "\t\t\tresolve(" + dataObject + "s)\n" +
             "\t\t})\n" +
             "\t}\n" +
             "\treturn {\n" +

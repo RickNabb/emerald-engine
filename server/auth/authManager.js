@@ -69,6 +69,58 @@ module.exports = (engine, db, fs, promise) => {
     })
   }
 
+  /**
+   * Change the user's password if their old password matches their entry
+   * in the database.
+   * @param  {string} email       The user's email address.
+   * @param  {string} oldPassword The user's old password.
+   * @param  {string} newPassword The user's new password.
+   * @return {object}             Resolve the promise to the user object
+   * with the new password.
+   */
+  function changePassword(email, oldPassword, newPassword) {
+    return new Promise(async (resolve, reject) => {
+      let compRes, result, user, passHash
+      result = await db.mysql.queryPromise(
+        "SELECT * FROM `user` WHERE `email`=?",
+        [ email ]
+      ).catch(err => reject(err))
+      if (result[0]) {
+        compRes = await checkPassword(oldPassword, result[0].password_hash)
+          .catch(err => reject(err))
+        if (compRes) {
+          passHash = await bcrypt.hash(newPassword, saltRounds)
+          user = await engine.dataObjectManager.dataObjects.user.updateUser(
+            result[0].id,
+            email,
+            passHash,
+            result[0].active,
+            result[0].confirmation_uuid
+          ).catch(err => reject(err))
+          delete result[0].password_hash
+          delete result[0].confirmation_uuid
+          result[0].password_hash = user.password_hash
+          result[0].loginResponse = RESPONSE_PASSWORD_CHANGED
+        } else {
+          engine.debug.log("Password mismatch")
+          delete result[0].password_hash
+          delete result[0].confirmation_uuid
+          result[0].loginResponse = RESPONSE_INVALID_LOGIN
+        }
+      } else {
+        result = []
+        result[0].loginResponse = RESPONSE_INVALID_LOGIN
+      }
+      resolve(result)
+    })
+  }
+
+  /**
+   * Create a new user in the database and return it to the promise.
+   * @param  {string} email    The user's email address
+   * @param  {string} password The user's password
+   * @return {object}          The user object created.
+   */
   function createUser(email, password) {
     return new Promise(async (resolve, reject) => {
       let hashedPass = await bcrypt.hash(password, saltRounds)

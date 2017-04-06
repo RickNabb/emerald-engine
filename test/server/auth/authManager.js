@@ -10,7 +10,9 @@ module.exports = (db, engine, fs, promise) => {
 
   let tests = [
     prepareUser,
-    authenticateUserValid
+    authenticateUserValid,
+    authenticateUserInvalid,
+    changePassword
   ]
 
   async function run() {
@@ -27,7 +29,7 @@ module.exports = (db, engine, fs, promise) => {
     res = 0
     res = await cleanUp()
       .catch(err => engine.debug.error(err))
-    engine.debug.log('Cleaned up ' + res + ' rows')
+    engine.debug.log('Cleaned up ' + res + ' row(s)')
   }
 
   function prepareUser() {
@@ -44,9 +46,9 @@ module.exports = (db, engine, fs, promise) => {
       let result
       result = await authManager.authenticate('testuser@test.com','testuserpassword')
         .catch(err => reject("Prepare User Test: FAILED (" + err + ")"))
-      if (result[0].loginResponse === authManager.RESPONSE_INVALID_LOGIN)
+      if (result[0].loginResponse === authManager.RESPONSE_OK)
         resolve("Authenticate User Valid Test: SUCCESS")
-      else if (result[0].loginResponse === authManager.RESPONSE_OK)
+      else if (result[0].loginResponse === authManager.RESPONSE_INVALID_LOGIN)
         resolve("Authenticate User Valid Test: FAILED (valid login)")
       else
         resolve("Authenticate User Valid Test: FAILED (unknown response)")
@@ -56,14 +58,34 @@ module.exports = (db, engine, fs, promise) => {
   function authenticateUserInvalid() {
     return new Promise(async (resolve, reject) => {
       let result
-      result = await authManager.authenticate('testuser@test.com','testuserpassword')
+      result = await authManager.authenticate('testuser@test.com','testuserpassworde')
         .catch(err => reject("Prepare User Test: FAILED (" + err + ")"))
-      if (result[0].loginResponse === authManager.RESPONSE_OK)
-        resolve("Authenticate User Valid Test: SUCCESS")
-      else if (result[0].loginResponse === authManager.RESPONSE_INVALID_LOGIN)
-        resolve("Authenticate User Valid Test: FAILED (invalid login)")
+      if (result[0].loginResponse === authManager.RESPONSE_INVALID_LOGIN)
+        resolve("Authenticate User Invalid Test: SUCCESS")
+      else if (result[0].loginResponse === authManager.RESPONSE_OK)
+        resolve("Authenticate User Invalid Test: FAILED (invalid login)")
       else
-        resolve("Authenticate User Valid Test: FAILED (unknown response)")
+        resolve("Authenticate User Invalid Test: FAILED (unknown response)")
+    })
+  }
+
+  function changePassword() {
+    return new Promise(async (resolve, reject) => {
+      let result
+      result = await authManager.changePassword('testuser@test.com', 'testuserpassword', 'testuserpassworde')
+        .catch(err => reject("Change Password Test: FAILED (" + err + ")"))
+      if (result[0].loginResponse === authManager.RESPONSE_INVALID_LOGIN)
+        resolve("Change Password Test: FAILED (invalid login)")
+      else if (result[0].loginResponse === authManager.PASSWORD_CHANGED) {
+        result = await authManager.authenticate('testuser@test.com','testuserpassworde')
+          .catch(err => reject("Change Password Test: FAILED (" + err + ")"))
+        if (result[0].loginResponse === authManager.RESPONSE_OK)
+          resolve("Authenticate User Invalid Test: SUCCESS")
+        else if (result[0].loginResponse === authManager.RESPONSE_INVALID_LOGIN)
+          reject("Change Password Test: FAILED (can't log in with new pass)")
+      }
+      else
+        resolve("Change Password Test: FAILED (unknown response)")
     })
   }
 

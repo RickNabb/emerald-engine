@@ -14,7 +14,7 @@ module.exports = (db) => {
 	}
 	function updateUser(id,email,password_hash,active,confirmation_uuid) {
 		return new Promise(async (resolve, reject) => {
-			db.mysql.query('UPDATE `user` SET `email`=?,`password_hash`=?,`active`=?,`confirmation_uuid`=? WHERE `id`=?)',
+			let user = db.mysql.query('UPDATE `user` SET `email`=?,`password_hash`=?,`active`=?,`confirmation_uuid`=? WHERE `id`=?)',
 			[email,password_hash,active,confirmation_uuid,id])
 				.catch(err => reject(err))
 			resolve(user)
@@ -22,7 +22,7 @@ module.exports = (db) => {
 	}
 	function removeUser(id) {
 		return new Promise(async (resolve, reject) => {
-			db.mysql.query('DELETE FROM `user` WHERE `id`=?)',
+			let user = db.mysql.query('DELETE FROM `user` WHERE `id`=?)',
 			[id])
 				.catch(err => reject(err))
 			resolve(user)
@@ -30,7 +30,7 @@ module.exports = (db) => {
 	}
 	function getUser(id) {
 		return new Promise(async (resolve, reject) => {
-			db.mysql.query('SELECT * FROM `user` WHERE `id`=?)',
+			let user = db.mysql.query('SELECT * FROM `user` WHERE `id`=?)',
 			[id])
 				.catch(err => reject(err))
 			resolve(user)
@@ -38,10 +38,10 @@ module.exports = (db) => {
 	}
 	function getUsers(id) {
 		return new Promise(async (resolve, reject) => {
-			db.mysql.query('SELECT * FROM `user` )',
+			let users = db.mysql.query('SELECT * FROM `user` )',
 			[])
 				.catch(err => reject(err))
-			resolve(user)
+			resolve(users)
 		})
 	}
 	return {
