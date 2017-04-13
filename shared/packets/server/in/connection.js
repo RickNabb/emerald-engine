@@ -18,12 +18,30 @@ module.exports = (engine, fs, promise) => {
      */
     function onConnect () {
       return new Promise(async (resolve, reject) => {
+        let _packets
         engine.io.on('connection', (socket) => {
           engine.debug.log('A user connected')
           initSocket(socket)
         })
-        let _packets = await registerPackets()
+        _packets = await registerPackets()
+        await generatePacketManifest(_packets)
         resolve(_packets)
+      })
+    }
+
+    /**
+     * Generate a packet manifest JSON file to serve up
+     * to the client.
+     * @param  {object} packets Associative array of all of our client
+     * and server packets.
+     * @return {Promise} resolves to nothing
+     */
+    function generatePacketManifest(packets) {
+      return new Promise((resolve, reject) => {
+        fs.writeFile(__dirname + '/../../manifest.json', JSON.stringify(packets), 'utf8', (err) => {
+          if (err) reject(err)
+          resolve()
+        })
       })
     }
 

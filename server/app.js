@@ -88,8 +88,9 @@ async function init() {
   app.use('/imports', express.static(path.join(__dirname, '/../../imports')))
   app.use('/css', express.static(path.join(__dirname, '/../../client/css')))
   app.use('/js', express.static(path.join(__dirname, '/../../client/js/build')))
-
-  // TODO : Make sure we can get each CSS file from these static serve-ups
+  app.use('/fonts', express.static(path.join(__dirname, '/../../client/fonts')))
+  app.use('/packets', express.static(path.join(__dirname, '/../shared/packets/client')))
+  app.use('/packetManifest', express.static(path.join(__dirname, '/../shared/packets/manifest.json')))
 
   // process.on('uncaughtException', (exception) => {
   //   debug.error(exception, true)

@@ -4,18 +4,13 @@
 */
 
 define(function (require) {
-  let socket = require('../../socket.io/socket.io')()
-  let packetManager = require('./packetManager').then(_packetManager =>
-    // Create network threads and events here
-
-    window.setInterval(() => {
-      _packetManager.packets.out.ping.send(socket, new Date())
-    }, 10000)
-  )
-  $(document).foundation()
-
-  document.emerald = {
-    "socket": socket,
-    "packetManager": packetManager
-  }
+  return new Promise(async (resolve, reject) => {
+    let socket = require('../../socket.io/socket.io')()
+    let packetManager = await require('./packetManager')
+    $(document).foundation()
+    document.emerald = {
+      "socket": socket,
+      "packetManager": packetManager
+    }
+  })
 })

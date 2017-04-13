@@ -12,7 +12,7 @@ define(function (require) {
     try {
       socket.emit('clientPing', {"datetime": dateTime})
     } catch (err) {
-      console.log('err')
+      console.log('Error: ' + err)
     }
   }
 

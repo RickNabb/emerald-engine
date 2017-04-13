@@ -8,22 +8,20 @@ define(function (require) {
    * init - Initialize the packet manager.
    */
   function init() {
-    return new Promise(async (resolve, reject) => {
-      let packets = {"in": [], "out": []}, packet, index
-      $.get('/api/packets/client',
+    return new Promise((resolve, reject) => {
+      let packets = {"in": {}, "out": {}}, packet, index
+      $.get('/packetManifest',
         function (data) {
-          for (index in data.in) {
-            packet = data.in[index]
-            console.log(packet)
-            require(['../../api/packets/client/in/' + packet], (packetMod) => {
+          for (index in data.client.in) {
+            packet = data.client.in[index]
+            require(['../../packets/in/' + packet], (packetMod) => {
               packets.in[packet] = (packetMod)
             })
           }
-          for (index in data.out) {
-            packet = data.out[index]
-            console.log(packet)
-            require(['../../api/packets/client/out/' + packet], (packetMod) => {
-              packets.out[packet] = (packetMod)
+          for (index in data.client.out) {
+            packet = data.client.out[index]
+            require(['../../packets/out/' + packet], (packetMod) => {
+              packets.out[packet] = packetMod
             })
           }
           resolve(packets)
@@ -44,8 +42,7 @@ define(function (require) {
   return new Promise(async (resolve, reject) => {
     let packets = await init()
     resolve({
-      "packets": packets,
-      // "send": send
+      "packets": packets
     })
   })
 })
