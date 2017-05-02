@@ -97,7 +97,7 @@ function queryPromise(queryString, params) {
                 // Debugging
                 // console.log("Query results: " + JSON.stringify(results));
                 // console.log("Query: " + queryString);
-                
+
                 conn.release()
                 if (err) reject(err)
                 resolve(results)

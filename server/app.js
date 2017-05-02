@@ -102,14 +102,15 @@ async function init() {
   db.init()
 
   // Start up all the managers
-  dataObjectManager = await require('./dataObjects/dataObjectManager.js')(engine, db, fs, promise)
-  packetManager = await require('./packetManager.js')(engine, fs, promise)
+  dataObjectManager = await require(__dirname + '/dataObjects/dataObjectManager.js')(engine, db, fs, promise)
+  packetManager = await require(__dirname + '/packetManager.js')(engine, fs, promise)
+  authManager = require(__dirname + '/auth/authManager.js')(engine, db, fs, promise)
 
   // Register managers with the engine
   engine.dataObjectManager = dataObjectManager
   engine.packetManager = packetManager
+  engine.authManager = authManager
 
-  authManager = require(__dirname + '/auth/authManager.js')(engine, db, fs, promise)
   setupRoutes()
 }
 

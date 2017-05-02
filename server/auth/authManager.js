@@ -20,19 +20,6 @@ module.exports = (engine, db, fs, promise) => {
   const RESPONSE_LOGGED_IN = 7
   const saltRounds = 10;
 
-  return {
-    "authenticate": authenticate,
-    "createUser": createUser,
-    "RESPONSE_OK": RESPONSE_OK,
-    "RESPONSE_INVALID_LOGIN": RESPONSE_INVALID_LOGIN,
-    "RESPONSE_UNKNOWN_ERROR": RESPONSE_UNKNOWN_ERROR,
-    "RESPONSE_SERVER_UPDATING": RESPONSE_SERVER_UPDATING,
-    "RESPONSE_USERNAME_TAKEN": RESPONSE_USERNAME_TAKEN,
-    "RESPONSE_ACCOUNT_CREATED": RESPONSE_ACCOUNT_CREATED,
-    "RESPONSE_PASSWORD_CHANGED": RESPONSE_PASSWORD_CHANGED,
-    "RESPONSE_LOGGED_IN": RESPONSE_LOGGED_IN
-  }
-
   /**
    * Authenticate the user into the application
    * @param  {string} username The username
@@ -43,9 +30,10 @@ module.exports = (engine, db, fs, promise) => {
   function authenticate (email, password) {
     return new Promise(async (resolve, reject) => {
       let compRes
+      let passHash = await bcrypt.hash(password, saltRounds)
       let result = await db.mysql.queryPromise(
-        "SELECT * FROM `user` WHERE `email`=?",
-        [ email ]
+        "SELECT * FROM `user` WHERE `email`=? AND `password_hash`=?",
+        [ email, passHash ]
       ).catch(err => reject(err))
       if (result[0]) {
         compRes = await checkPassword(password, result[0].password_hash)
@@ -62,7 +50,7 @@ module.exports = (engine, db, fs, promise) => {
           result[0].loginResponse = RESPONSE_INVALID_LOGIN
         }
       } else {
-        result = []
+        result = [{}]
         result[0].loginResponse = RESPONSE_INVALID_LOGIN
       }
       resolve(result)
@@ -149,5 +137,18 @@ module.exports = (engine, db, fs, promise) => {
         .catch(err => reject(err))
       resolve(res)
     })
+  }
+
+  return {
+    "authenticate": authenticate,
+    "createUser": createUser,
+    "RESPONSE_OK": RESPONSE_OK,
+    "RESPONSE_INVALID_LOGIN": RESPONSE_INVALID_LOGIN,
+    "RESPONSE_UNKNOWN_ERROR": RESPONSE_UNKNOWN_ERROR,
+    "RESPONSE_SERVER_UPDATING": RESPONSE_SERVER_UPDATING,
+    "RESPONSE_USERNAME_TAKEN": RESPONSE_USERNAME_TAKEN,
+    "RESPONSE_ACCOUNT_CREATED": RESPONSE_ACCOUNT_CREATED,
+    "RESPONSE_PASSWORD_CHANGED": RESPONSE_PASSWORD_CHANGED,
+    "RESPONSE_LOGGED_IN": RESPONSE_LOGGED_IN
   }
 }

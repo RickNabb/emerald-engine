@@ -1,8 +1,8 @@
 /**
-* ping.js
-* The ping packet.
-* This packet should be used to determine if a client is still connected
-* to the server.
+* login.js
+* The login packet.
+* This packet should be used to attempt to authenticate the user into
+* the application.
 */
 
 define(function (require) {
@@ -11,12 +11,11 @@ define(function (require) {
    * An ID to ensure modules loading this packet can get context
    * of what packet it is.
    */
-  const id = 'ping'
+  const id = 'login'
 
-  function send(socket, dateTime) {
-    console.log('Pinging server...')
+  function send(socket, data) {
     try {
-      socket.emit('clientPing', {"datetime": dateTime})
+      socket.emit(id, data)
     } catch (err) {
       console.log('Error: ' + err)
     }

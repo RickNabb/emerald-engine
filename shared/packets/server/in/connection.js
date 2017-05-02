@@ -3,11 +3,17 @@
 * The connection packet incoming from the client.
 */
 
+/**
+ * An ID to ensure modules loading this packet can get context
+ * of what packet it is.
+ */
+const id = 'connection'
+
 module.exports = (engine, fs, promise) => {
   return new Promise(async (resolve, reject) => {
     let readdir_promise = promise.denodeify(fs.readdir)
-    // TODO : Check for rejection
     let packets = await onConnect()
+      .catch(err => reject(err))
     resolve(packets)
 
     /**
@@ -24,7 +30,9 @@ module.exports = (engine, fs, promise) => {
           initSocket(socket)
         })
         _packets = await registerPackets()
+          .catch(err => reject(err))
         await generatePacketManifest(_packets)
+          .catch(err => reject(err))
         resolve(_packets)
       })
     }
@@ -52,12 +60,10 @@ module.exports = (engine, fs, promise) => {
      */
     function initSocket(socket) {
       let packet
+      engine.packetManager.setSocket(socket)
       for (packet in packets.server.in) {
         socket.on(packet, packets.server.in[packet].handlePacket)
       }
-      // for (packet in packets.server.out) {
-      //   socket.on(packet, packets.server.out[packet].handlePacket)
-      // }
     }
 
     /**
@@ -146,7 +152,7 @@ module.exports = (engine, fs, promise) => {
         let path = dir + '/' + packetName
         fs.stat(path, (err, stat) => {
           if (err === null) {
-            resolve(require(path))
+            resolve(require(path)(engine))
           }
           else if (err.code === 'ENOENT') {
             engine.debug.error("Trying to register packet " + packetName + " - couldn't find file in " + __dirname)

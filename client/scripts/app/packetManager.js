@@ -5,6 +5,16 @@
 define(function (require) {
 
   /**
+   * A collection of all the packets the manager manages.
+   */
+  let packets
+
+  /**
+   * The socket we want to use for communcation.
+   */
+  let socket
+
+  /**
    * init - Initialize the packet manager.
    */
   function init() {
@@ -15,13 +25,14 @@ define(function (require) {
           for (index in data.client.in) {
             packet = data.client.in[index]
             require(['../../packets/in/' + packet], (packetMod) => {
-              packets.in[packet] = (packetMod)
+              packets.in[packetMod.id] = packetMod
+              socket.on(packetMod.id, packetMod.handlePacket)
             })
           }
           for (index in data.client.out) {
             packet = data.client.out[index]
             require(['../../packets/out/' + packet], (packetMod) => {
-              packets.out[packet] = packetMod
+              packets.out[packetMod.id] = packetMod
             })
           }
           resolve(packets)
@@ -35,14 +46,33 @@ define(function (require) {
    * @param  {string} packet The packet name.
    * @param  {object} data   JSON data to send.
    */
-  // function send(packet, data) {
-  //   packet.send(socket, data)
-  // }
+  function send(packet, data) {
+    // debugging
+    console.log("Sending data: " + JSON.stringify(data))
 
-  return new Promise(async (resolve, reject) => {
-    let packets = await init()
-    resolve({
-      "packets": packets
-    })
-  })
+    packet.send(socket, data)
+  }
+
+  /**
+   * Set the socket that we want to use and register packet handlers
+   * to it.
+   * @param  {object} _socket The socketIO instance.
+   */
+  // function setSocket(_socket) {
+  //   let packet
+  //   socket = _socket
+  //   console.log(packets.in)
+  //   for (packet in packets.in) {
+  //     console.log('test')
+  //     // socket.on(packet, packet.handlePacket)
+  //   }
+  // }
+  return async (_socket) => {
+    socket = _socket
+    packets = await init()
+    return {
+      "packets": packets,
+      "send": send
+    }
+  }
 })
