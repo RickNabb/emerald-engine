@@ -18,7 +18,7 @@ let http = require('http').Server(app)
 /**
  * The socketIO module for handling app communications.
  */
-let io = require('socket.io')(http)
+let io = require('socket.io')(http, {'pingInterval': 15000, 'pingTimeout': 30000})
 
 /**
  * The path module for resolving filepaths.
@@ -89,6 +89,7 @@ async function init() {
   app.use('/css', express.static(path.join(__dirname, '/../../client/css')))
   app.use('/js', express.static(path.join(__dirname, '/../../client/js/build')))
   app.use('/fonts', express.static(path.join(__dirname, '/../../client/fonts')))
+  app.use('/img', express.static(path.join(__dirname, '/../../client/img')))
   app.use('/packets', express.static(path.join(__dirname, '/../shared/packets/client')))
   app.use('/packetManifest', express.static(path.join(__dirname, '/../shared/packets/manifest.json')))
 

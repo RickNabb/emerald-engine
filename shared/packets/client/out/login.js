@@ -13,6 +13,11 @@ define(function (require) {
    */
   const id = 'login'
 
+  /**
+   * Send the login packet to the server.
+   * @param  {object} socket The SocketIO socket.
+   * @param  {object} data   Object of form { username, password }
+   */
   function send(socket, data) {
     try {
       socket.emit(id, data)

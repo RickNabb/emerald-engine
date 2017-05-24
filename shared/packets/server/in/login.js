@@ -21,19 +21,6 @@ module.exports = (engine) => {
   async function handlePacket (data) {
     let authResult = await engine.authManager.authenticate(data['email'], data['password']).catch(err => console.log(err))
     engine.packetManager.send(engine.packetManager.packets.server.out.loginResponse, authResult)
-    // switch (authResult[0].loginResponse) {
-    //   case (engine.authManager.RESPONSE_OK): {
-    //     console.log('login ok')
-    //     break;
-    //   }
-    //   case (engine.authManager.RESPONSE_INVALID_LOGIN): {
-    //
-    //     break;
-    //   }
-    //   default: {
-    //     break;
-    //   }
-    // }
   }
 
   return {
