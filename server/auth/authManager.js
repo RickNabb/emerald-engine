@@ -115,7 +115,7 @@ module.exports = (engine, db, fs, promise) => {
         [ email ]
       ).catch(err => reject(err))
       if (queryResult.length === 0)
-        resolve(createUser(email, password))
+        resolve(await createUser(email, password))
       else
         resolve({ "response": RESPONSE_USERNAME_TAKEN })
     })
@@ -132,12 +132,15 @@ module.exports = (engine, db, fs, promise) => {
       const hashedPass = await bcrypt.hash(password, saltRounds)
       const confirmationUUID = uuid()
       const doManager = engine.dataObjectManager
-      const user = await doManager.dataObjects.user.createUser(
+      const insertResult = await doManager.dataObjects.user.createUser(
         email,
         hashedPass,
         0,
         confirmationUUID)
       .catch (err => reject(err))
+      const user = await doManager.dataObjects.user.getUser(insertResult.insertId)
+      if (user[0])
+        user = user[0]
       resolve({"response": RESPONSE_ACCOUNT_CREATED, "user": user})
     })
   }

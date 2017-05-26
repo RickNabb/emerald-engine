@@ -24,7 +24,7 @@ module.exports = (engine, fs, promise) => {
      * @param  {object} data   Any data the packet needs.
      */
     function send(packet, data) {
-      console.log('emitting ' + packet.id + ': ' + data)
+      console.log('emitting ' + packet.id + ': ' + JSON.stringify(data))
       packet.send(socket, data)
     }
 

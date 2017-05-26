@@ -18,12 +18,11 @@ module.exports = (engine) => {
    * @param  {object} socket Our connection to the SocketIO module.
    */
   async function handlePacket (data) {
-    console.log(data)
-    let user = await engine.authManager.createUser(data.email, data.password)
+    let result = await engine.authManager.createUserAccount(data.email, data.password)
       .catch(err => console.log(err))
-    // if (user)
-    delete user.password_hash
-    engine.packetManager.send(engine.packetManager.packets.server.out.createAccountResponse, user)
+    if (result.user)
+      delete result.user.password_hash
+    engine.packetManager.send(engine.packetManager.packets.server.out.createAccountResponse, result)
   }
 
   return {
