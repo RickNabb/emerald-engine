@@ -12,7 +12,8 @@ module.exports = (db, engine, fs, promise) => {
     prepareUser,
     authenticateUserValid,
     authenticateUserInvalid,
-    changePassword
+    changePassword,
+    createDuplicateAccount
   ]
 
   async function run() {
@@ -46,10 +47,10 @@ module.exports = (db, engine, fs, promise) => {
       let result
       result = await authManager.authenticate('testuser@test.com','testuserpassword')
         .catch(err => reject("Prepare User Test: FAILED (" + err + ")"))
-      if (result[0].loginResponse === authManager.RESPONSE_OK)
+      if (result.response === authManager.RESPONSE_OK)
         resolve("Authenticate User Valid Test: SUCCESS")
-      else if (result[0].loginResponse === authManager.RESPONSE_INVALID_LOGIN)
-        resolve("Authenticate User Valid Test: FAILED (valid login)")
+      else if (result.response === authManager.RESPONSE_INVALID_LOGIN)
+        resolve("Authenticate User Valid Test: FAILED (invalid login)")
       else
         resolve("Authenticate User Valid Test: FAILED (unknown response)")
     })
@@ -60,10 +61,10 @@ module.exports = (db, engine, fs, promise) => {
       let result
       result = await authManager.authenticate('testuser@test.com','testuserpassworde')
         .catch(err => reject("Prepare User Test: FAILED (" + err + ")"))
-      if (result[0].loginResponse === authManager.RESPONSE_INVALID_LOGIN)
+      if (result.response === authManager.RESPONSE_INVALID_LOGIN)
         resolve("Authenticate User Invalid Test: SUCCESS")
-      else if (result[0].loginResponse === authManager.RESPONSE_OK)
-        resolve("Authenticate User Invalid Test: FAILED (invalid login)")
+      else if (result.response === authManager.RESPONSE_OK)
+        resolve("Authenticate User Invalid Test: FAILED (valid login)")
       else
         resolve("Authenticate User Invalid Test: FAILED (unknown response)")
     })
@@ -74,18 +75,31 @@ module.exports = (db, engine, fs, promise) => {
       let result
       result = await authManager.changePassword('testuser@test.com', 'testuserpassword', 'testuserpassworde')
         .catch(err => reject("Change Password Test: FAILED (" + err + ")"))
-      if (result[0].loginResponse === authManager.RESPONSE_INVALID_LOGIN)
+      if (result.response === authManager.RESPONSE_INVALID_LOGIN)
         resolve("Change Password Test: FAILED (invalid login)")
-      else if (result[0].loginResponse === authManager.PASSWORD_CHANGED) {
+      else if (result.response === authManager.RESPONSE_PASSWORD_CHANGED) {
+        engine.debug.log('Change Password Test: Partial Success (Password Changed)')
         result = await authManager.authenticate('testuser@test.com','testuserpassworde')
           .catch(err => reject("Change Password Test: FAILED (" + err + ")"))
-        if (result[0].loginResponse === authManager.RESPONSE_OK)
-          resolve("Authenticate User Invalid Test: SUCCESS")
-        else if (result[0].loginResponse === authManager.RESPONSE_INVALID_LOGIN)
+        if (result.response === authManager.RESPONSE_OK)
+          resolve("Change Password Test: SUCCESS (Authentication w/ new password)")
+        else if (result.response === authManager.RESPONSE_INVALID_LOGIN)
           reject("Change Password Test: FAILED (can't log in with new pass)")
       }
       else
         resolve("Change Password Test: FAILED (unknown response)")
+    })
+  }
+
+  function createDuplicateAccount() {
+    return new Promise(async (resolve, reject) => {
+      let result
+      result = await authManager.createUserAccount('testuser@test.com', 'testuserpassword')
+        .catch(err => reject('Create Duplicate Account Test: FAILED (' + err + ')'))
+      if (result.response === authManager.RESPONSE_USERNAME_TAKEN)
+        resolve('Create Duplicate Account Test: SUCCESS')
+      else
+        reject('Create Duplicate Account Test: FAILED (did not catch email already taken)')
     })
   }
 

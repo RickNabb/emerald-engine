@@ -96,6 +96,7 @@ module.exports = (engine, db, fs, promise) => {
                 query = "ALTER TABLE `" + dataObject + "` CHANGE COLUMN `" + columnResults[i].Field + "` `" + dataObjectAttrNames[i] + "` " + columnResults[i].Type + ";"
                 dbQueries.push(db.mysql.queryPromise(query, []))
               }
+              // Change column types if the names match, but types don't
               if (columnResults[i].Field === dataObjectAttrNames[i] && !dataObjectAttrs[dataObjectAttrNames[i]].includes(dataTypes[columnResults[i].Type])) {
                 query = "ALTER TABLE `" + dataObject + "` CHANGE COLUMN `" + dataObjectAttrNames[i] + "` `" + dataObjectAttrNames[i] + "` "
                 dataObjectAttrProps = dataObjectAttrs[dataObjectAttrNames[i]]
@@ -107,8 +108,14 @@ module.exports = (engine, db, fs, promise) => {
                   query += 'tinyint(1) '
                 dbQueries.push(db.mysql.queryPromise(query, []))
               }
+              // Add not null to any column
               if (columnResults[i].Default !== 'null') {
                 query = "ALTER TABLE `" + dataObject + "` CHANGE COLUMN `" + columnResults[i].Field + "` `" + columnResults[i].Field + "` " + columnResults[i].Type + " NOT NULL;"
+                dbQueries.push(db.mysql.queryPromise(query, []))
+              }
+              // Add auto-increment to any primary key that doesn't have it
+              if (dataObjectAttrs[dataObjectAttrNames[i]].includes('primary') && columnResults[i].Extra !== 'auto_increment') {
+                query = "ALTER TABLE `" + dataObject + "` CHANGE COLUMN `" + columnResults[i].Field + "` `" + columnResults[i].Field + "` " + columnResults[i].Type + " auto_increment;"
                 dbQueries.push(db.mysql.queryPromise(query, []))
               }
             }
@@ -193,13 +200,13 @@ module.exports = (engine, db, fs, promise) => {
           // Update function
           fileContents += "\tfunction update" + capitalDataObject + "(id," + dataObjectAttrStr + ") {\n" +
             "\t\treturn new Promise(async (resolve, reject) => {\n" +
-            "\t\t\tlet " + dataObject + " = db.mysql.query('UPDATE `" + dataObject + "` SET "
+            "\t\t\tlet " + dataObject + " = await db.mysql.queryPromise('UPDATE `" + dataObject + "` SET "
           fileAppend = ""
           for (dataObjectAttr in dataObjectAttrs) {
             fileAppend += "`" + dataObjectAttr + "`=?,"
           }
           fileAppend = fileAppend.substring(0, fileAppend.length - 1)
-          fileContents += fileAppend + " WHERE `id`=?)',\n" +
+          fileContents += fileAppend + " WHERE `id`=?',\n" +
             "\t\t\t[" + dataObjectAttrStr + ",id])\n" +
             "\t\t\t\t.catch(err => reject(err))\n" +
             "\t\t\tresolve(" + dataObject + ")\n" +
@@ -208,7 +215,7 @@ module.exports = (engine, db, fs, promise) => {
           // Remove function
           fileContents += "\tfunction remove" + capitalDataObject + "(id) {\n" +
             "\t\treturn new Promise(async (resolve, reject) => {\n" +
-            "\t\t\tlet " + dataObject + " = db.mysql.query('DELETE FROM `" + dataObject + "` WHERE `id`=?)',\n" +
+            "\t\t\tlet " + dataObject + " = await db.mysql.queryPromise('DELETE FROM `" + dataObject + "` WHERE `id`=?',\n" +
             "\t\t\t[id])\n" +
             "\t\t\t\t.catch(err => reject(err))\n" +
             "\t\t\tresolve(" + dataObject + ")\n" +
@@ -217,16 +224,16 @@ module.exports = (engine, db, fs, promise) => {
           // Get singular function
           fileContents += "\tfunction get" + capitalDataObject + "(id) {\n" +
             "\t\treturn new Promise(async (resolve, reject) => {\n" +
-            "\t\t\tlet " + dataObject + " = db.mysql.query('SELECT * FROM `" + dataObject + "` WHERE `id`=?)',\n" +
+            "\t\t\tlet " + dataObject + " = await db.mysql.queryPromise('SELECT * FROM `" + dataObject + "` WHERE `id`=?',\n" +
             "\t\t\t[id])\n" +
             "\t\t\t\t.catch(err => reject(err))\n" +
             "\t\t\tresolve(" + dataObject + ")\n" +
             "\t\t})\n" +
             "\t}\n"
           // Get all function
-          fileContents += "\tfunction get" + capitalDataObject + "s(id) {\n" +
+          fileContents += "\tfunction get" + capitalDataObject + "s() {\n" +
             "\t\treturn new Promise(async (resolve, reject) => {\n" +
-            "\t\t\tlet " + dataObject + "s = db.mysql.query('SELECT * FROM `" + dataObject + "` )',\n" +
+            "\t\t\tlet " + dataObject + "s = await db.mysql.queryPromise('SELECT * FROM `" + dataObject + "`',\n" +
             "\t\t\t[])\n" +
             "\t\t\t\t.catch(err => reject(err))\n" +
             "\t\t\tresolve(" + dataObject + "s)\n" +

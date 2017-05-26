@@ -30,28 +30,26 @@ module.exports = (engine, db, fs, promise) => {
   function authenticate (email, password) {
     return new Promise(async (resolve, reject) => {
       let compRes
-      let passHash = await bcrypt.hash(password, saltRounds)
       let result = await db.mysql.queryPromise(
-        "SELECT * FROM `user` WHERE `email`=? AND `password_hash`=?",
-        [ email, passHash ]
+        "SELECT * FROM `user` WHERE `email`=?",
+        [ email ]
       ).catch(err => reject(err))
       if (result[0]) {
         compRes = await checkPassword(password, result[0].password_hash)
           .catch(err => reject(err))
         if (compRes) {
-          engine.debug.log("Login OK")
+          // engine.debug.log("Login OK")
           delete result[0].password_hash
           delete result[0].confirmation_uuid
-          result[0].loginResponse = RESPONSE_OK
+          result = { "response": RESPONSE_OK, "user": result[0] }
         } else {
-          engine.debug.log("Login bad")
+          // engine.debug.log("Login bad")
           delete result[0].password_hash
           delete result[0].confirmation_uuid
-          result[0].loginResponse = RESPONSE_INVALID_LOGIN
+          result = { "response": RESPONSE_INVALID_LOGIN, "user": result[0] }
         }
       } else {
-        result = [{}]
-        result[0].loginResponse = RESPONSE_INVALID_LOGIN
+        result = { "response": RESPONSE_INVALID_LOGIN }
       }
       resolve(result)
     })
@@ -87,19 +85,39 @@ module.exports = (engine, db, fs, promise) => {
           ).catch(err => reject(err))
           delete result[0].password_hash
           delete result[0].confirmation_uuid
-          result[0].password_hash = user.password_hash
-          result[0].loginResponse = RESPONSE_PASSWORD_CHANGED
+          result = { "response": RESPONSE_PASSWORD_CHANGED, "user": result[0] }
         } else {
-          engine.debug.log("Password mismatch")
           delete result[0].password_hash
           delete result[0].confirmation_uuid
-          result[0].loginResponse = RESPONSE_INVALID_LOGIN
+          result = { "response": RESPONSE_INVALID_LOGIN, "user": result[0] }
         }
       } else {
-        result = []
-        result[0].loginResponse = RESPONSE_INVALID_LOGIN
+        result = { "response": RESPONSE_INVALID_LOGIN }
       }
       resolve(result)
+    })
+  }
+
+  /**
+   * Create a new user account, first checking that the email has not been
+   * registered already.
+   * @param  {string} email    The user's email address.
+   * @param  {string} password The user's plaintext password.
+   * @return {object}          Promise resolving to a response, and a user
+   * if the account was created successfully.
+   */
+  function createUserAccount(email, password) {
+    return new Promise(async (resolve, reject) => {
+      let queryResult
+      // Make sure the user's email hasn't been used before
+      queryResult = await db.mysql.queryPromise(
+        'SELECT * FROM user WHERE `email`=?',
+        [ email ]
+      ).catch(err => reject(err))
+      if (queryResult.length === 0)
+        resolve(createUser(email, password))
+      else
+        resolve({ "response": RESPONSE_USERNAME_TAKEN })
     })
   }
 
@@ -111,16 +129,16 @@ module.exports = (engine, db, fs, promise) => {
    */
   function createUser(email, password) {
     return new Promise(async (resolve, reject) => {
-      let hashedPass = await bcrypt.hash(password, saltRounds)
-      let confirmationUUID = uuid()
-      let doManager = engine.dataObjectManager
-      let user = await doManager.dataObjects.user.createUser(
+      const hashedPass = await bcrypt.hash(password, saltRounds)
+      const confirmationUUID = uuid()
+      const doManager = engine.dataObjectManager
+      const user = await doManager.dataObjects.user.createUser(
         email,
         hashedPass,
         0,
         confirmationUUID)
       .catch (err => reject(err))
-      resolve(user)
+      resolve({"response": RESPONSE_ACCOUNT_CREATED, "user": user})
     })
   }
 
@@ -142,6 +160,8 @@ module.exports = (engine, db, fs, promise) => {
   return {
     "authenticate": authenticate,
     "createUser": createUser,
+    "changePassword": changePassword,
+    "createUserAccount": createUserAccount,
     "RESPONSE_OK": RESPONSE_OK,
     "RESPONSE_INVALID_LOGIN": RESPONSE_INVALID_LOGIN,
     "RESPONSE_UNKNOWN_ERROR": RESPONSE_UNKNOWN_ERROR,

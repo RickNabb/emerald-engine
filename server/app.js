@@ -57,6 +57,11 @@ let db = require('./db/databaseManager.js')(fs)
 let engine = require('./engine.js')(io, debug, db, stringFunctions)
 
 /**
+ * The nodemailer engine.
+ */
+// let mailer = require('./utils/mailer.js')
+
+/**
  * The auth manager.
  */
 let authManager
