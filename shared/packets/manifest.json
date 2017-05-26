@@ -1,1 +1,1 @@
-{"client":{"in":["loginResponse"],"out":["login","ping"]},"server":{"in":{"clientPing":{"id":"clientPing"},"disconnect":{"id":"disconnect"},"login":{"id":"login"}},"out":{"loginResponse":{"id":"loginResponse"}}}}
+{"client":{"in":["createAccountResponse","loginResponse"],"out":["createAccount","login","ping"]},"server":{"in":{"clientPing":{"id":"clientPing"},"createAccount":{"id":"createAccount"},"disconnect":{"id":"disconnect"},"login":{"id":"login"}},"out":{"createAccountResponse":{"id":"createAccountResponse"},"loginResponse":{"id":"loginResponse"}}}}
