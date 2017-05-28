@@ -105,7 +105,7 @@ async function init() {
   http.listen(port, function() {
     debug.log("Listening on *:" + port + "...")
   })
-  db.init()
+  await db.init()
 
   // Start up all the managers
   dataObjectManager = await require(__dirname + '/dataObjects/dataObjectManager.js')(engine, db, fs, promise)

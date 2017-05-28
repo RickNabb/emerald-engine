@@ -20,8 +20,10 @@ module.exports = (engine) => {
   async function handlePacket (data) {
     let result = await engine.authManager.createUserAccount(data.email, data.password)
       .catch(err => console.log(err))
-    if (result.user)
+    if (result.user) {
       delete result.user.password_hash
+      delete result.user.confirmation_uuid
+    }
     engine.packetManager.send(engine.packetManager.packets.server.out.createAccountResponse, result)
   }
 

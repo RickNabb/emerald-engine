@@ -139,9 +139,7 @@ module.exports = (engine, db, fs, promise) => {
         confirmationUUID)
       .catch (err => reject(err))
       const user = await doManager.dataObjects.user.getUser(insertResult.insertId)
-      if (user[0])
-        user = user[0]
-      resolve({"response": RESPONSE_ACCOUNT_CREATED, "user": user})
+      resolve({"response": RESPONSE_ACCOUNT_CREATED, "user": user[0]})
     })
   }
 

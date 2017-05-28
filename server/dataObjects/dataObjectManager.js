@@ -83,72 +83,86 @@ module.exports = (engine, db, fs, promise) => {
         let primary = -1
         let dbQueries = [], results = []
         let dataObject, query, dataObjectAttrs, dataObjectAttr,
-          dataObjectAttrProps, i, columnResults, dataObjectAttrNames
+          dataObjectAttrProps, i, queryResults, dataObjectAttrNames
         for (dataObject in dataObjects) {
           dataObjectAttrs = copyObject(dataObjects[dataObject])
-          query = "SHOW columns FROM " + dataObject + ";"
-          columnResults = await db.mysql.queryPromise(query, [])
+          query = "SHOW TABLES LIKE '" + dataObject + "';"
+          queryResults = await db.mysql.queryPromise(query, [])
             .catch(err => reject(err))
-          dataObjectAttrNames = Object.keys(dataObjectAttrs)
-          if (columnResults.length === dataObjectAttrNames.length) {
-            for (i = 0; i < columnResults.length; i++) {
-              if (columnResults[i].Field !== dataObjectAttrNames[i] && dataObjectAttrs[dataObjectAttrNames[i]].includes(dataTypes[columnResults[i].Type])) {
-                query = "ALTER TABLE `" + dataObject + "` CHANGE COLUMN `" + columnResults[i].Field + "` `" + dataObjectAttrNames[i] + "` " + columnResults[i].Type + ";"
-                dbQueries.push(db.mysql.queryPromise(query, []))
+          if (queryResults.length === 0)
+            dbQueries.push(createDataObjectTable(dataObject, dataObjectAttrs))
+          else {
+            query = "SHOW columns FROM " + dataObject + ";"
+            queryResults = await db.mysql.queryPromise(query, [])
+              .catch(err => reject(err))
+            dataObjectAttrNames = Object.keys(dataObjectAttrs)
+            if (queryResults.length === dataObjectAttrNames.length) {
+              for (i = 0; i < queryResults.length; i++) {
+                if (queryResults[i].Field !== dataObjectAttrNames[i] && dataObjectAttrs[dataObjectAttrNames[i]].includes(dataTypes[queryResults[i].Type])) {
+                  dbQueries.push(changeDataObjectTableColumn(dataObject, queryResults[i].Field, dataObjectAttrNames[i], queryResults[i].Type))
+                }
+                // Change column types if the names match, but types don't
+                if (queryResults[i].Field === dataObjectAttrNames[i] && !dataObjectAttrs[dataObjectAttrNames[i]].includes(dataTypes[queryResults[i].Type])) {
+                  query = "ALTER TABLE `" + dataObject + "` CHANGE COLUMN `" + dataObjectAttrNames[i] + "` `" + dataObjectAttrNames[i] + "` "
+                  dataObjectAttrProps = dataObjectAttrs[dataObjectAttrNames[i]]
+                  if (dataObjectAttrProps.includes('int'))
+                    query += 'int(11) '
+                  else if (dataObjectAttrProps.includes('string'))
+                    query += 'varchar(255) COLLATE utf32_unicode_ci '
+                  else if (dataObjectAttrProps.includes('boolean'))
+                    query += 'tinyint(1) '
+                  dbQueries.push(db.mysql.queryPromise(query, []))
+                }
+                // Add not null to any column
+                if (queryResults[i].Default !== 'null') {
+                  dbQueries.push(changeDataObjectTableColumn(dataObject, queryResults[i].Field, queryResults[i].Field, queryResults[i].Type, 'NOT NULL'))
+                }
+                // Add auto-increment to any primary key that doesn't have it
+                if (dataObjectAttrs[dataObjectAttrNames[i]].includes('primary') && queryResults[i].Extra !== 'auto_increment') {
+                  dbQueries.push(changeDataObjectTableColumn(dataObject, queryResults[i].Field, queryResults[i].Field, queryResults[i].Type, 'auto_increment'))
+                }
               }
-              // Change column types if the names match, but types don't
-              if (columnResults[i].Field === dataObjectAttrNames[i] && !dataObjectAttrs[dataObjectAttrNames[i]].includes(dataTypes[columnResults[i].Type])) {
-                query = "ALTER TABLE `" + dataObject + "` CHANGE COLUMN `" + dataObjectAttrNames[i] + "` `" + dataObjectAttrNames[i] + "` "
-                dataObjectAttrProps = dataObjectAttrs[dataObjectAttrNames[i]]
-                if (dataObjectAttrProps.includes('int'))
-                  query += 'int(11) '
-                else if (dataObjectAttrProps.includes('string'))
-                  query += 'varchar(255) COLLATE utf32_unicode_ci '
-                else if (dataObjectAttrProps.includes('boolean'))
-                  query += 'tinyint(1) '
-                dbQueries.push(db.mysql.queryPromise(query, []))
-              }
-              // Add not null to any column
-              if (columnResults[i].Default !== 'null') {
-                query = "ALTER TABLE `" + dataObject + "` CHANGE COLUMN `" + columnResults[i].Field + "` `" + columnResults[i].Field + "` " + columnResults[i].Type + " NOT NULL;"
-                dbQueries.push(db.mysql.queryPromise(query, []))
-              }
-              // Add auto-increment to any primary key that doesn't have it
-              if (dataObjectAttrs[dataObjectAttrNames[i]].includes('primary') && columnResults[i].Extra !== 'auto_increment') {
-                query = "ALTER TABLE `" + dataObject + "` CHANGE COLUMN `" + columnResults[i].Field + "` `" + columnResults[i].Field + "` " + columnResults[i].Type + " auto_increment;"
-                dbQueries.push(db.mysql.queryPromise(query, []))
-              }
+            } else if (queryResults.length !== dataObjectAttrNames.length) {
+              engine.debug.log("The data object '" + dataObject + "' and its corresponding mySQL table are unequal, and too disparate to automatically change. Please change one or the other.")
             }
-          } else if (columnResults.length !== dataObjectAttrNames.length) {
-            engine.debug.log("The data object '" + dataObject + "' and its corresponding mySQL table are unequal, and too disparate to automatically change. Please change one or the other.")
-          } else if (columnResults === undefined) {
-            query = "CREATE TABLE IF NOT EXISTS `" + dataObject + '` ('
-            for (dataObjectAttr in dataObjectAttrs) {
-              query += '`' + dataObjectAttr + '` '
-              dataObjectAttrProps = dataObjectAttrs[dataObjectAttr]
-              if (dataObjectAttrProps.includes('int'))
-                query += 'int(11) '
-              else if (dataObjectAttrProps.includes('string'))
-                query += 'varchar(255) COLLATE utf32_unicode_ci '
-              else if (dataObjectAttrProps.includes('boolean'))
-                query += 'tinyint(1) '
-              query += 'NOT NULL'
-              if (dataObjectAttrProps.includes('primary')) {
-                query += ' AUTO_INCREMENT'
-                primary = dataObjectAttr
-              }
-              query += ','
-            }
-            if (primary !== -1)
-              query += 'PRIMARY KEY (`' + primary + '`)'
-            query += ') ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_unicode_ci;'
-            dbQueries.push(db.mysql.queryPromise(query, []))
           }
         }
         Promise.all(dbQueries)
           .catch(error => reject(error))
         resolve()
       })
+    }
+
+    function changeDataObjectTableColumn(dataObject, oldColumn, newColumn, type, extra) {
+      let query = "ALTER TABLE `" + dataObject + "` CHANGE COLUMN `" + oldColumn + "` `" + newColumn + "` " + type + " " + extra + ";"
+      return db.mysql.queryPromise(query, [])
+    }
+
+    function createDataObjectTable(dataObject, dataObjectAttrs) {
+      let query = "CREATE TABLE IF NOT EXISTS `" + dataObject + '` ('
+      let primary = -1
+      let dataObjectAttrProps, dataObjectAttr
+      for (dataObjectAttr in dataObjectAttrs) {
+        query += '`' + dataObjectAttr + '` '
+        dataObjectAttrProps = dataObjectAttrs[dataObjectAttr]
+        if (dataObjectAttrProps.includes('int'))
+          query += 'int(11) '
+        else if (dataObjectAttrProps.includes('string'))
+          query += 'varchar(255) COLLATE utf32_unicode_ci '
+        else if (dataObjectAttrProps.includes('boolean'))
+          query += 'tinyint(1) '
+        query += 'NOT NULL'
+        if (dataObjectAttrProps.includes('primary')) {
+          query += ' AUTO_INCREMENT'
+          primary = dataObjectAttr
+        }
+        query += ','
+      }
+      if (primary !== -1)
+        query += 'PRIMARY KEY (`' + primary + '`)'
+      query += ') ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_unicode_ci;'
+      console.log(query)
+      return db.mysql.queryPromise(query, [])
     }
 
     /**

@@ -5,11 +5,13 @@
 */
 
 module.exports = (fs) => {
-  let mysql = require('./mysql-connect.js')
+  let mysql = require('./mysql-connect.js')(fs)
 
   function init() {
     return new Promise(async (resolve, reject) => {
-      await mysql.connect('local-dev')
+      // TODO : I feel like this is super hacky and should just happen
+      // naturally... Look into this.
+      mysql.dbName = await mysql.connect('local-dev')
       //TODO: Make this loaded from a config
       resolve()
     })
