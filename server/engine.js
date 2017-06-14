@@ -13,7 +13,7 @@
  * @param  {object} stringFunctions The string functions module.
  */
 module.exports = (_io, _debug, _db, _stringFunctions) => {
-  let dataObjectManager, packetManager, authManager
+  let dataObjectManager, packetManager, authManager, guideManager
 
   return {
     "io": _io,
@@ -23,5 +23,6 @@ module.exports = (_io, _debug, _db, _stringFunctions) => {
     "dataObjectManager": dataObjectManager,
     "packetManager": packetManager,
     "authManager": authManager
+    "guideManager": guideManager
   }
 }

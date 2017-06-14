@@ -1,6 +1,6 @@
 /**
 * createAccount.js
-* The login packet.
+* The account creation packet.
 * This packet should be used to attempt to create a user account.
 */
 

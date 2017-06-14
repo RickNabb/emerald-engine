@@ -67,6 +67,11 @@ let engine = require('./engine.js')(io, debug, db, stringFunctions)
 let authManager
 
 /**
+ * The guide manager.
+ */
+let guideManager
+
+/**
  * The packet manager to handle transactions between client and server.
  */
 let packetManager
@@ -111,11 +116,13 @@ async function init() {
   dataObjectManager = await require(__dirname + '/dataObjects/dataObjectManager.js')(engine, db, fs, promise)
   packetManager = await require(__dirname + '/packetManager.js')(engine, fs, promise)
   authManager = require(__dirname + '/auth/authManager.js')(engine, db, fs, promise)
+  guideManager = require(__dirname + '/user/guideManager.js')(engine, db, fs, promise)
 
   // Register managers with the engine
   engine.dataObjectManager = dataObjectManager
   engine.packetManager = packetManager
   engine.authManager = authManager
+  engine.guideManager = guideManager
 
   setupRoutes()
 }
